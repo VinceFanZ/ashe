@@ -31,7 +31,7 @@ function observifyArray(arr) {
   let arrayAugmentations = Object.create(Array.prototype) // 创建一个 __proto__ 到 Array.prototype 的 arrayAugmentations 对象
   aryMethods.forEach(method => { // 在 arrayAugmentations 对象上将需要变异的函数重写
     arrayAugmentations[method] = function (...arg) {
-      const oldValue = _.clone(this)
+      const oldValue = _.cloneDeep(this)
       Array.prototype[method].apply(this, arg) // 执行默认操作
       const newValue = this
       globalDep.notify(newValue, oldValue) // 重写后的函数会先执行默认操作，随后通知 Dep
