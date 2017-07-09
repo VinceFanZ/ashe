@@ -1,4 +1,4 @@
-const _ = require('lodash')
+const _ = this === 'global' ? require('lodash') : window._
 // Dep 类，添加依赖收集方法 depend
 let uid = 1
 class Dep {
