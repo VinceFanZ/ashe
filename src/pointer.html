@@ -19,7 +19,7 @@
       ctx = canvas.getContext("2d");
 
       if (window.PointerEvent) {
-        canvas.addEventListener("pointerdown", function () {
+        canvas.addEventListener("pointerdown", function (e) {
           e.preventDefault();
           canvas.addEventListener("pointermove", draw, false);
         }, false);
@@ -32,7 +32,7 @@
         canvas.addEventListener("touchend", endPointer, false);
       } else {
         //Provide fallback for user agents that do not support Pointer Events
-        canvas.addEventListener("mousedown", function () {
+        canvas.addEventListener("mousedown", function (e) {
           e.preventDefault();
           canvas.addEventListener("mousemove", draw, false);
         }, false);
