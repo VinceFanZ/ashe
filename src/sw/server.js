@@ -6,9 +6,11 @@ const path = require('path')
 
 const app = express()
 
-app.use(express.static(path.resolve(__dirname, '../src/sw')))
+let pushSubscription
+
+app.use(express.static(path.resolve(__dirname)))
 app.use(bodyParser.json())
-app.use(bodyParser.urlencoded({     // to support URL-encoded bodies
+app.use(bodyParser.urlencoded({ // to support URL-encoded bodies
   extended: true
 }))
 
@@ -19,15 +21,11 @@ webPush.setVapidDetails(
 )
 
 app.get('/', (req, res) => {
-  res.sendFile(path.resolve(__dirname, '../src/sw/inde.html'))
+  res.sendFile(path.resolve(__dirname, 'index.html'))
 })
 
-let pushSubscription
-
 app.post('/register', cors(), (req, res) => {
-  const endpoint = req.body.endpoint
-  const authSecret = req.body.authSecret
-  const key = req.body.key
+  const { endpoint, authSecret, key } = req.body
 
   pushSubscription = {
     endpoint: endpoint,
@@ -37,20 +35,21 @@ app.post('/register', cors(), (req, res) => {
     }
   }
 
-  const body = 'thank you for registering'
+  const body = 'Thank you for registering'
   const iconUrl = 'https://abs-0.twimg.com/responsive-web/web/ltr/icon-default.882fa4ccf6539401.png'
 
   webPush.sendNotification(pushSubscription,
-    JSON.stringify({
-      url: 'http://localhost:3111?111',
-      msg: body,
-      icon: iconUrl,
-      type: 'register'
-    })
-  )
+      JSON.stringify({
+        url: 'http://localhost:3111?111',
+        body: body,
+        icon: iconUrl,
+        type: 'register'
+      })
+    )
     .then(result => {
       console.log(result.statusCode)
       res.sendStatus(201)
+      sendMessage()
     })
     .catch(error => {
       console.error(error)
@@ -58,26 +57,28 @@ app.post('/register', cors(), (req, res) => {
 
 })
 
-let count = 0
-setInterval(() => {
-  const body = 'thank you for registering' + (++count)
-  const iconUrl = 'https://abs-0.twimg.com/responsive-web/web/ltr/icon-default.882fa4ccf6539401.png'
+function sendMessage () {
+  let count = 0
+  setInterval(() => {
+    const body = '来自火星人的赞 +' + (++count)
+    const iconUrl = 'https://abs-0.twimg.com/responsive-web/web/ltr/icon-default.882fa4ccf6539401.png'
 
-  webPush.sendNotification(pushSubscription,
-      JSON.stringify({
-        url: 'http://localhost:3111?111',
-        msg: body,
-        icon: iconUrl,
-        type: 'register'
+    webPush.sendNotification(pushSubscription,
+        JSON.stringify({
+          url: 'http://localhost:3111?111',
+          body: body,
+          icon: iconUrl,
+          type: 'message'
+        })
+      )
+      .then(result => {
+        console.log(result.statusCode)
       })
-    )
-    .then(result => {
-      console.log(result.statusCode)
-    })
-    .catch(error => {
-      console.error(error)
-    })
-}, 1000 * 60)
+      .catch(error => {
+        console.error(error)
+      })
+  }, 1000 * 60)
+}
 
 
 app.listen(3111, function () {

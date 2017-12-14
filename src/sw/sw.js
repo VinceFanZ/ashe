@@ -12,24 +12,35 @@
 // })
 
 var cacheName = 'test'
+
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(cacheName)
-      .then(cache => cache.addAll([
-        './assets/hall.jpg'
-      ]))
+    .then(cache => cache.addAll([
+      './assets/hall.jpg'
+    ]))
   )
 })
 
 self.addEventListener('push', event => {
   const payload = event.data ? JSON.parse(event.data.text()) : 'no payload'
-  const title = '收到新通知'
+  const title = '注册通知'
   console.log(payload)
 
   if (payload.type === 'register') {
     event.waitUntil(
       self.registration.showNotification(title, {
-        body: payload.msg,
+        body: payload.body,
+        url: payload.url,
+        icon: payload.icon
+      })
+    )
+  }
+
+  if (payload.type === 'message') {
+    event.waitUntil(
+      self.registration.showNotification('新消息', {
+        body: payload.body,
         url: payload.url,
         icon: payload.icon
       })
@@ -40,6 +51,6 @@ self.addEventListener('push', event => {
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
-      .then(response => response ? response : fetch(event.request))
+    .then(response => response ? response : fetch(event.request))
   )
 })
