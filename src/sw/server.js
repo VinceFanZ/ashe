@@ -6,6 +6,8 @@ const path = require('path')
 
 const app = express()
 
+let pushSubscription
+
 app.use(express.static(path.resolve(__dirname)))
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ // to support URL-encoded bodies
@@ -25,7 +27,7 @@ app.get('/', (req, res) => {
 app.post('/register', cors(), (req, res) => {
   const { endpoint, authSecret, key } = req.body
 
-  const pushSubscription = {
+  pushSubscription = {
     endpoint: endpoint,
     keys: {
       auth: authSecret,
@@ -47,7 +49,6 @@ app.post('/register', cors(), (req, res) => {
     .then(result => {
       console.log(result.statusCode)
       res.sendStatus(201)
-      sendMessage(pushSubscription)
     })
     .catch(error => {
       console.error(error)
@@ -55,9 +56,14 @@ app.post('/register', cors(), (req, res) => {
 
 })
 
-function sendMessage (pushSubscription) {
+sendMessage()
+
+function sendMessage () {
   let count = 0
   setInterval(() => {
+    if (!pushSubscription) {
+      return
+    }
     const body = '来自火星人的赞 +' + (++count)
     const iconUrl = 'https://abs-0.twimg.com/responsive-web/web/ltr/icon-default.882fa4ccf6539401.png'
 
