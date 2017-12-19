@@ -11,6 +11,14 @@
     navigator.serviceWorker.register('./sw.js')
     .then(registration => {
       console.log('SW registration: ' + registration.scope)
+      if (registration.installing) {
+        console.log('Service worker installing')
+      } else if (registration.waiting) {
+        console.log('Service worker installed')
+      } else if (registration.active) {
+        console.log('Service worker active')
+      }
+
       return registration.pushManager.getSubscription()
         .then(subscription => {
           if (subscription) {
