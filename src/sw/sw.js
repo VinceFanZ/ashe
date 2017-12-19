@@ -71,6 +71,11 @@ self.addEventListener('push', event => {
   }
 })
 
+self.addEventListener('notificationclick', event => {
+  event.notification.close()
+  clients.openWindow('http://localhost:3111')
+})
+
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request, { ignoreSearch: true })
