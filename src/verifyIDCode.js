@@ -8,4 +8,4 @@ function verify (card) {
   console.log(codeMaps[sum % 11])
 }
 
-verify('420683199208246118')
+verify('310110200008096084')
