@@ -1,4 +1,4 @@
-const _ = this === 'global' ? require('lodash') : window._
+const _ = typeof(window) === 'undefined' ? require('lodash') : window._
 // Dep 类，添加依赖收集方法 depend
 let uid = 1
 class Dep {
@@ -19,7 +19,7 @@ class Dep {
   }
 }
 Dep.target = null // Dep.target 用来暂存正在收集依赖的当前 watcher
-// 现在 Wactcher 接收三个参数，第一个为依赖收集函数（如上文的 render），第二个为回调，第三个为附加配置
+// 现在 Watcher 接收三个参数，第一个为依赖收集函数（如上文的 render），第二个为回调，第三个为附加配置
 class Watcher {
   constructor(expFn, cb, options = {}) {
     this.context = options.context
