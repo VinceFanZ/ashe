@@ -1,0 +1,243 @@
+<body>
+  <div id="container"></div>
+  <script src="http://www.yanhuangxueyuan.com/versions/threejsR92/build/three.js"></script>
+  <script>
+    // https://blog.csdn.net/qw8704149/article/details/121412729
+    var container;
+    var camera, scene, renderer;
+    var uniforms;
+    var vertexShader = `
+      void main() {
+        gl_Position = vec4( position, 1.0 );
+      } 
+    `
+    var fragmentShader = `
+    #ifdef GL_ES
+    precision mediump float;
+    #endif
+    uniform float u_time;
+    uniform vec2 u_mouse;
+    uniform vec2 u_resolution;
+
+
+    float sdCircle( vec2 p, float r )
+    {
+      return length(p) - r;// 到圆表面的距离
+    }
+
+    float sdBox( in vec2 p, in vec2 b )
+    {
+      vec2 d = abs(p)-b;
+      return length(max(d,0.0)) + min(max(d.x,d.y),0.0);
+    }
+
+    float sdBoxRadius( in vec2 p, in vec2 b,float radius )
+    {
+      vec2 d = abs(p)-b;
+      return length(max(d,0.0)) + min(max(d.x,d.y),0.0) - radius;
+    }
+    //通过端点和宽度绘制矩形
+    float sdOrientedBox( in vec2 p, in vec2 a, in vec2 b, float th )
+    {
+      float l = length(b-a);
+      vec2  d = (b-a)/l;
+      vec2  q = (p-(a+b)*0.5);
+            q = mat2(d.x,-d.y,d.y,d.x)*q;
+            q = abs(q)-vec2(l,th)*0.5;
+      return length(max(q,0.0)) + min(max(q.x,q.y),0.0);    
+    }
+
+    //线段
+    float sdSegment( in vec2 p, in vec2 a, in vec2 b )
+    {
+      vec2 pa = p-a, ba = b-a;
+      float h = clamp( dot(pa,ba)/dot(ba,ba), 0.0, 1.0 );
+      return length( pa - ba*h );
+    }
+
+    //菱形
+    float ndot(vec2 a, vec2 b ) { return a.x*b.x - a.y*b.y; }
+    float sdRhombus( in vec2 p, in vec2 b ) 
+    {
+      p = abs(p);
+      float h = clamp( ndot(b-2.0*p,b)/dot(b,b), -1.0, 1.0 );
+      float d = length( p-0.5*b*vec2(1.0-h,1.0+h) );
+      return d * sign( p.x*b.y + p.y*b.x - b.x*b.y );
+    }
+
+    //梯形
+    float dot2(in vec2 v ) { return dot(v,v); }
+    float sdTrapezoid( in vec2 p, in float r1, float r2, float he )
+    {
+      vec2 k1 = vec2(r2,he);
+      vec2 k2 = vec2(r2-r1,2.0*he);
+      p.x = abs(p.x);
+      vec2 ca = vec2(p.x-min(p.x,(p.y<0.0)?r1:r2), abs(p.y)-he);
+      vec2 cb = p - k1 + k2*clamp( dot(k1-p,k2)/dot2(k2), 0.0, 1.0 );
+      float s = (cb.x<0.0 && ca.y<0.0) ? -1.0 : 1.0;
+      return s*sqrt( min(dot2(ca),dot2(cb)) );
+    }
+
+    //三角形
+    float sdTriangle( in vec2 p, in vec2 p0, in vec2 p1, in vec2 p2 )
+    {
+      vec2 e0 = p1-p0, e1 = p2-p1, e2 = p0-p2;
+      vec2 v0 = p -p0, v1 = p -p1, v2 = p -p2;
+      vec2 pq0 = v0 - e0*clamp( dot(v0,e0)/dot(e0,e0), 0.0, 1.0 );
+      vec2 pq1 = v1 - e1*clamp( dot(v1,e1)/dot(e1,e1), 0.0, 1.0 );
+      vec2 pq2 = v2 - e2*clamp( dot(v2,e2)/dot(e2,e2), 0.0, 1.0 );
+      float s = sign( e0.x*e2.y - e0.y*e2.x );
+      vec2 d = min(min(vec2(dot(pq0,pq0), s*(v0.x*e0.y-v0.y*e0.x)),
+                      vec2(dot(pq1,pq1), s*(v1.x*e1.y-v1.y*e1.x))),
+                      vec2(dot(pq2,pq2), s*(v2.x*e2.y-v2.y*e2.x)));
+      return -sqrt(d.x)*sign(d.y);
+    }
+
+    float sdTriangleRadius( in vec2 p, in vec2 p0, in vec2 p1, in vec2 p2,float cornerRadius )
+    {
+      vec2 e0 = p1-p0, e1 = p2-p1, e2 = p0-p2;
+      vec2 v0 = p -p0, v1 = p -p1, v2 = p -p2;
+      vec2 pq0 = v0 - e0*clamp( dot(v0,e0)/dot(e0,e0), 0.0, 1.0 );
+      vec2 pq1 = v1 - e1*clamp( dot(v1,e1)/dot(e1,e1), 0.0, 1.0 );
+      vec2 pq2 = v2 - e2*clamp( dot(v2,e2)/dot(e2,e2), 0.0, 1.0 );
+      float s = sign( e0.x*e2.y - e0.y*e2.x );
+      vec2 d = min(min(vec2(dot(pq0,pq0), s*(v0.x*e0.y-v0.y*e0.x)),
+                      vec2(dot(pq1,pq1), s*(v1.x*e1.y-v1.y*e1.x))),
+                      vec2(dot(pq2,pq2), s*(v2.x*e2.y-v2.y*e2.x)));
+      return -sqrt(d.x)*sign(d.y) -cornerRadius;
+    }
+
+    float sdUnevenCapsule( vec2 p, float r1, float r2, float h )
+    {
+      p.x = abs(p.x);
+      float b = (r1-r2)/h;
+      float a = sqrt(1.0-b*b);
+      float k = dot(p,vec2(-b,a));
+      if( k < 0.0 ) return length(p) - r1;
+      if( k > a*h ) return length(p-vec2(0.0,h)) - r2;
+      return dot(p, vec2(a,b) ) - r1;
+    }
+
+    //扇形
+    float sdPie( in vec2 p, in vec2 c, in float r )
+    {
+      p.x = abs(p.x);
+      float l = length(p) - r;
+      float m = length(p-c*clamp(dot(p,c),0.0,r)); // c=sin/cos of aperture
+      return max(l,m*sign(c.y*p.x-c.x*p.y));
+    }
+
+
+    float opOnion( in vec2 p, in float r )
+    {
+      return abs(sdTrapezoid(p,0.9,0.3,0.5)) - r;
+    }
+
+    void main( void ) {
+
+      //窗口坐标调整为[-1,1],坐标原点在屏幕中心
+      vec2 st = (gl_FragCoord.xy * 2. - u_resolution) / u_resolution.y;
+
+      vec3 line_color = vec3(1.0,1.0,0.0);
+      vec3 color = vec3(0.6);//背景色
+      float pct = 0.0;
+
+
+      pct = sdCircle(st,0.5);
+
+      pct = sdBox(st,vec2(0.3));
+
+      pct = sdBoxRadius(st,vec2(0.3),0.02);
+
+      pct = sdOrientedBox(st,vec2(-0.3),vec2(0.3,0.6),0.1);
+
+      pct = sdSegment(st,vec2(-0.3),vec2(0.3,0.6));
+
+      pct = sdRhombus(st,vec2(0.5,0.3));
+
+      pct = sdTrapezoid(st,0.9,0.3,0.5);
+
+      pct = sdTriangle(st,vec2(-0.3,0.0),vec2(0.3,0.0),vec2(0.0,0.5));
+
+      pct = sdUnevenCapsule(st,0.3,0.2,0.6);
+
+      pct = sdPie(st,vec2(0.3,0.1),0.8);
+
+      pct = sdTriangleRadius(st,vec2(-0.3,0.0),vec2(0.3,0.0),vec2(0.0,0.5),0.05);
+      
+      pct = opOnion(st,0.02);
+
+      //color = mix(color,line_color,pct);
+      color = mix(color,line_color,1.0-smoothstep(0.0,0.01,pct));
+      gl_FragColor = vec4(color, 1.0);
+    }
+    `
+
+    init();
+    animate();
+
+    function init() {
+      container = document.getElementById('container');
+
+      camera = new THREE.Camera();
+      camera.position.z = 1;
+
+      scene = new THREE.Scene();
+
+      var geometry = new THREE.PlaneBufferGeometry(2, 2);
+
+      uniforms = {
+        u_time: {
+          type: "f",
+          value: 1.0
+        },
+        u_resolution: {
+          type: "v2",
+          value: new THREE.Vector2()
+        },
+        u_mouse: {
+          type: "v2",
+          value: new THREE.Vector2()
+        }
+      };
+
+      var material = new THREE.ShaderMaterial({
+        uniforms: uniforms,
+        vertexShader: vertexShader,
+        fragmentShader: fragmentShader
+      });
+
+      var mesh = new THREE.Mesh(geometry, material);
+      scene.add(mesh);
+
+      renderer = new THREE.WebGLRenderer();
+      //renderer.setPixelRatio(window.devicePixelRatio);
+
+      container.appendChild(renderer.domElement);
+
+      onWindowResize();
+      window.addEventListener('resize', onWindowResize, false);
+
+      document.onmousemove = function (e) {
+        uniforms.u_mouse.value.x = e.pageX
+        uniforms.u_mouse.value.y = e.pageY
+      }
+    }
+
+    function onWindowResize(event) {
+      renderer.setSize(800, 800);
+      uniforms.u_resolution.value.x = renderer.domElement.width;
+      uniforms.u_resolution.value.y = renderer.domElement.height;
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      render();
+    }
+
+    function render() {
+      uniforms.u_time.value += 0.02;
+      renderer.render(scene, camera);
+    }
+  </script>
+</body>

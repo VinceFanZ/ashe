@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pag Demo</title>
+</head>
+
+<body>
+  <canvas class="canvas" id="pag"></canvas>
+</body>
+<script src="https://cdn.jsdelivr.net/npm/libpag@latest/lib/libpag.min.js"></script>
+<script>
+  window.onload = async () => {
+    // 实例化 PAG
+    const PAG = await window.libpag.PAGInit();
+    // 获取 PAG 素材数据
+    const buffer = await fetch('./wstask_prizebaoji.pag').then((response) => response.arrayBuffer());
+    // 加载 PAG 素材为 PAGFile 对象
+    const pagFile = await PAG.PAGFile.load(buffer);
+    // 将画布尺寸设置为 PAGFile的尺寸
+    const canvas = document.getElementById('pag');
+    canvas.width = pagFile.width();
+    canvas.height = pagFile.height();
+    // 实例化 PAGView 对象
+    const pagView = await PAG.PAGView.init(pagFile, canvas);
+    // 播放 PAGView
+    await pagView.play();
+  };
+</script>
+
+</html>
