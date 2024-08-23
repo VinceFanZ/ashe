@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Reader</title>
+</head>
+<body>
+    <h1>Excel Reader</h1>
+    <input type="file" id="fileInput" accept=".xlsx, .xls" />
+    <div id="output"></div>
+
+    <!-- 引入SheetJS库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const output = document.getElementById('output');
+
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+
+                    // 读取第一个表格（Sheet）
+                    const firstSheetName = workbook.SheetNames[5];
+                    const worksheet = workbook.Sheets[firstSheetName];
+
+                    // 将工作表转换为JSON
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                    // 在页面上显示结果
+                    displayData(jsonData);
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+
+        function displayData(data) {
+            output.innerHTML = "<h2>Excel Data:</h2>";
+            const result = {}
+            data.forEach((row, index) => {
+                if (index === 0) {
+                  return;
+                }
+                // const rowDiv = document.createElement('div');
+                // rowDiv.textContent = `INSERT INTO \`gdu-system\`.\`t_device_error_code\`( \`error_code\`, \`error_name\`, \`product_model\`, \`tips\`,  \`error_level\` ) VALUES ( '${row[1]}', '${row[2]}', 'S200/S400',  '${row[8]}', ${row[6]} );`;
+                // output.appendChild(rowDiv);
+                const code = row[7], message = row[14];
+                if (code && message) {
+                  result[code] = message;
+                }
+            });
+            const resultDiv = document.createElement('div');
+            resultDiv.textContent = JSON.stringify(result, null, 2);
+            output.appendChild(resultDiv);
+        }
+    </script>
+</body>
+</html>

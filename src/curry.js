@@ -1,29 +1,29 @@
-function curry (fn, args) {
-  let length = fn.length
-  args = args || []
-  return function () {
-    let _args = args.slice(0)
-    let arg
-    let i = 0
-    for (i; i < arguments.length; i++) {
-      arg = arguments[i]
-      _args.push(arg)
-    }
-    if (_args.length < length) {
-      return curry.call(this, fn, _args)
+const selfCurryFn = (fn) => {
+  const fnLen = fn.length
+  console.log('🚀 ~ file: curry.js:3 ~ selfCurryFn ~ fnLen', fnLen)
+  function curry(...args) {
+    const argLen = args.length // curry 接收的参数
+    if (argLen >= fnLen) {
+      return fn.apply(this, args) // 如果外面绑定 this 的话，直接绑定到fn上
     } else {
-      return fn.apply(this, _args)
+      // 参数个数没有达到时继续接收剩余的参数
+      function otherCurry(...args2) {
+        return curry.apply(this, args.concat(args2))
+      }
+
+      return otherCurry
     }
   }
+
+  return curry
 }
 
-
-function add(a, b, c) {
-  console.log(a + b + c)
+const selfAddFn = (x, y, z) => {
+  return x + y + z
 }
 
-const fn = curry(add)
+const selfSum = selfCurryFn(selfAddFn)
 
-fn(3, 5, 7)
-fn(3, 5)(7)
-fn(3)(5)(7)
+console.log('🚀 ~ file: curry.js:56 ~ selfSum(1)(2)(3)', selfSum(1)(2)(3))
+console.log('🚀 ~ file: curry.js:55 ~ selfSum(1, 2)(3)', selfSum(1, 2)(3))
+console.log('🚀 ~ file: curry.js:54 ~ selfSum(1, 2, 3)', selfSum(1, 2, 3))
