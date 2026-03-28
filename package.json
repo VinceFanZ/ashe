@@ -9,7 +9,7 @@
     "start": "http-server ./src -a 0.0.0.0 -p 8000 -s -c-1"
   },
   "dependencies": {
-    "body-parser": "^1.18.2",
+    "body-parser": "^2.2.1",
     "cors": "^2.8.4",
     "express": "^4.16.2",
     "lodash": "^4.17.4",
